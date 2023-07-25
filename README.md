@@ -20,6 +20,7 @@ A Solidity smart contract named "Assessment" and a React frontend for interactin
 * The frontend communicates with the contract using the contract's address and ABI (Application Binary Interface)
 
 # Execution (Steps to execute):
+After cloning the github, you will want to do the following to get the code running on your computer.
 
 1. Inside the project directory, in the terminal type: npm i
 2. Open two additional terminals in your VS code
