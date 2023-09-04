@@ -4,42 +4,38 @@ import atm_abi from "../artifacts/contracts/Assessment.sol/Assessment.json";
 
 export default function HomePage() {
   const [ethWallet, setEthWallet] = useState(undefined);
-  const [account, setAccount] = useState(undefined);
   const [atm, setATM] = useState(undefined);
   const [balance, setBalance] = useState(undefined);
-  const [ownerUID, setOwnerUID] = useState(undefined);
-  const [divide, setDivide] = useState(undefined);
-  const [sub, setSub] = useState(undefined);
-  const [mod, setModulo] = useState(undefined);
-  const [inputA, setInputA] = useState("");
-  const [inputB, setInputB] = useState("");
-
   
-  const contractAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+  // Integration
+  const [selectedAccount, setSelectedAccount] = useState(undefined);
+  const [accounts, setAccounts] = useState([]); 
+  const [transactionHistory, setTransacionHistory] = useState([]);
 
+  const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
   const atmABI = atm_abi.abi;
 
   const getWallet = async() => {
     if (window.ethereum) {
       setEthWallet(window.ethereum);
-      window.ethereum.on("accountsChanged", (accounts) => {
-        handleAccount(accounts);
-      });
     }
 
     if (ethWallet) {
       const accounts = await ethWallet.request({method: "eth_accounts"});
-      handleAccount(accounts);
+      handleAccounts(accounts);
     }
   }
 
-  const handleAccount = (account) => {
-    if (account) {
-      console.log ("Account connected: ", account);
-      setAccount(account);
+  const handleAccounts = (accounts) => {
+    if (accounts && accounts.length>0) {
+      console.log ("Account connected: ", accounts);
+      setAccounts(accounts);
+      setSelectedAccount(accounts[0]);
     }
     else {
-      console.log("No account found");
+      console.log("No account is found");
+      setAccounts([]);
+      setSelectedAccount(undefined);
     }
   }
 
@@ -50,7 +46,7 @@ export default function HomePage() {
     }
   
     const accounts = await ethWallet.request({ method: 'eth_requestAccounts' });
-    handleAccount(accounts);
+    handleAccounts(accounts);
     
     // once wallet is set we can get a reference to our deployed contract
     getATMContract();
@@ -64,146 +60,194 @@ export default function HomePage() {
     setATM(atmContract);
   }
 
+  const handleAccountSelection = (account) => {
+    setSelectedAccount(account);
+  }
+
+  
   const getBalance = async() => {
     if (atm) {
+      console.log(atm);
       setBalance((await atm.getBalance()).toNumber());
     }
   }
 
-  const deposit = async() => {
+
+// Integration!
+
+  const getTransactionHistory = async () => {
     if (atm) {
+      const historyLength = await atm.getEventHistoryLength();
+      const history = [];
+      for (let i = 0; i < historyLength; i++) {
+        const transaction = await atm.getTransaction(i);
+
+        const timestamp = transaction[2].toString();
+        const date = new Date(timestamp * 1000); 
+        const formattedDate = date.toLocaleString(); 
+
+        history.push({
+          sender: transaction[0],
+          amount: transaction[1].toString(),
+          timestamp: formattedDate
+        });
+      }
+      setTransacionHistory(history);
+    }
+  };
+
+  
+
+  const deposit = async() => {
+    if (atm && setSelectedAccount) {
       let tx = await atm.deposit(1);
       await tx.wait()
       getBalance();
+      getTransactionHistory();
     }
   }
 
   const withdraw = async() => {
-    if (atm) {
+    if (atm && setSelectedAccount) {
       let tx = await atm.withdraw(1);
       await tx.wait()
-      getBalance();
+      getTransactionHistory();
     }
   }
-  const checkOwner = async () => {
-    if (atm) {
-      let owner = await atm.checkOwner();
-      setOwnerUID("21BCS11262");
-    }
-  }
-  const division = async () => {
-      if (atm) {
-        const a = parseInt(inputA);
-        const b = parseInt(inputB);
-        const answer = await atm.division(a,b);
-        setDivide(answer);
-      }
-  }  
-  const subtraction = async () => {
-    if (atm) {
-      const a = parseInt(inputA);
-      const b = parseInt(inputB);
-      const answer = await atm.substraction(a,b);
-      setSub(answer);
-    }
-  }
-  const modulo = async () => {
-    if (atm) {
-      const a = parseInt(inputA);
-      const b = parseInt(inputB);
-      const answer = await atm.modulo(a,b);
-      setMod(answer);
-    }
-  }
-  const handleInputAChange = (event) => {
-    setInputA(event.target.value);
-  };
 
-  const handleInputBChange = (event) => {
-    setInputB(event.target.value);
-  };
 
-  
+
+
   const initUser = () => {
     // Check to see if user has Metamask
     if (!ethWallet) {
-      return <p>Please install Metamask in order to use this ATM.</p>
+      return <p> install Metamask in order to use this Wallet.</p>
     }
 
     // Check to see if user is connected. If not, connect to their account
-    if (!account) {
-      return <button onClick={connectAccount}>Please connect your Metamask wallet</button>
+    if (!selectedAccount) {
+      return <button onClick={connectAccount} style={{height: "5vh", width: "20%", backgroundColor: "#A9A9A9", color: "red", borderRadius: "10px", cursor: "pointer", border: "0px",fontSize:"1rem"}}> connect your Metamask wallet</button>
     }
 
     if (balance == undefined) {
       getBalance();
     }
-
-    return (
-      <>
-        <div>
-          <p style={{ fontFamily: "Sans-serif" }}>Your Account: {account}</p>
-          <p style={{ fontFamily: "Sans-serif" }}>Your Balance: {balance}</p>
-          <p style={{ fontFamily: "Sans-serif" }}>Owner UID: {ownerUID}</p>
-  
-          <button style={{ backgroundColor: "#cyan" }} onClick={deposit}>
-            Deposit 1 ETH
-          </button>
-          <button style={{ backgroundColor: "yellow" }} onClick={withdraw}>
-            Withdraw 1 ETH
-          </button>
-        </div>
-  
-        <div>
-          <h2>Calculator</h2>
-          <p style={{ fontFamily: "Sans-serif" }}>Divide: {divide ? divide.toString() : ""}</p>
-          <p style={{ fontFamily: "Sans-serif" }}>Sub: {sub ? sub.toString() : ""}</p>
-          <p style={{ fontFamily: "Sans-serif" }}>Modulo: {mod ? mod.toString() : ""}</p>
-
-          <input
-            type="number"
-            placeholder="Enter value A"
-            value={inputA}
-            onChange={handleInputAChange}
-          />
-          <input
-            type="number"
-            placeholder="Enter value B"
-            value={inputB}
-            onChange={handleInputBChange}
-          />
-  
-          <button style={{ backgroundColor: "red" }} onClick={division}>
-            Divide
-          </button>
-          <button style={{ backgroundColor: "red" }} onClick={subtraction}>
-            Sub
-          </button>
-          <button style={{ backgroundColor: "red" }} onClick={modulo}>
-            Mod
-          </button>
-        </div>
-      </>
-    );
     
+    return (
+      <div style={{height: "auto"}}>
+        <h2 style={{ color: "blue", fontFamily: "sans-serif" }}>
+          Your Account details!
+        </h2>
+        <div
+          style={{
+            width: "50%", height: "auto", border: "4px solid blue", borderRadius: "10px", display: "block", padding:"2vh", margin: "auto", position: "relative", backgroundColor: "#A9A9A9", }}
+        >
+          <h3
+            style={{
+              fontFamily: "sans-serif", textAlign: "left", margin: "1vh", color: "green", }}
+          >
+            
+            Accounts Connected By You Are:
+          </h3>
+          {accounts.map((account, id) => (
+            <span
+              key={account}
+              onClick={() => handleAccountSelection(account)}
+              style={{
+                display: "flex",
+                alignItems: "start", margin: "10px", marginLeft: "20px", fontFamily: "system-ui", }}
+            >
+              {id + 1}. {account} <br />
+            </span>
+          ))}
+        </div>
+
+      <div style={{marginTop: "1vh"}}>
+      <button
+          style={{
+            height: "6vh", width: "20%", margin: "5px 10px", backgroundColor: "#F0E68C", color: "red", borderRadius: "5px", cursor: "pointer", border: "0px", fontSize: "1rem", }}
+          onClick={deposit}
+        >
+          Deposit 1 ETH
+        </button>
+        <button
+          style={{
+            height: "6vh", width: "20%", margin: "5px 10px", backgroundColor: "#3CB371", color: "red", borderRadius: "5px", cursor: "pointer", border: "0px", fontSize: "1rem", }}
+          onClick={withdraw}
+        >
+          Withdraw 1 ETH
+        </button>
+      </div>
+
+
+
+
+        <div style={{padding: "10px"}}>        
+        <button
+          style={{
+            height: "6vh",
+            width: "15%", margin: "5px 10px", backgroundColor: "#AFEEEE", color: "red", borderRadius: "5px", cursor: "pointer", border: "0px", fontSize: "1rem",
+          }}
+          onClick={() => {
+            const content = document.getElementById("content");
+            const history = document.getElementById("history");
+            content.style.display = "block";
+            history.style.display = "none";
+          }}
+        >
+          Owner Address
+        </button>
+        <button
+          style={{
+            height: "6vh", width: "15%", margin: "10px 20px", backgroundColor: "#	EE82EE", color: "red", borderRadius: "5px", cursor: "pointer", border: "0px", fontSize: "1rem",
+          }}
+          onClick={() => {
+            {
+              const content = document.getElementById("content");
+              const history = document.getElementById("history");
+              content.style.display = "none";
+              history.style.display = "block";
+            }
+          }}
+        >
+          History
+        </button>
+        </div>
+        <div style={{width: "50%", height: "auto", border: "1px solid black", backgroundColor:"#9ACD32", display: "block", margin: "auto", borderRadius:"10px", border: "dotted"}}>
+
+
+          <p id="content" style={{padding:"1vh", fontSize: "1.2rem", fontFamily:"monospace"}}> Details ... </p>
+          <div id="history" style={{padding:"1vh", fontSize: "1.0rem", fontFamily:"sans-serif", display: "none", textAlign: "left"}}>
+          <h3 style={{paddingLeft:"1vh"}}>Transaction History:</h3>
+          {transactionHistory.map((transaction, index) => (
+            <div key={index} style={{paddingLeft:"1vh"}}>
+              <p>Sender: {transaction.sender}</p>
+              <p>Amount: {transaction.amount}</p>
+              <p>Time: {transaction.timestamp}</p>
+            <hr />
+
+            </div>
+          ))}
+          </div>
+        </div>
+
+
+      </div>
+    );
   }
 
-  useEffect(() => {
-    getWallet();
-    checkOwner();
-  }, []);
+  useEffect(() => {getWallet(); getTransactionHistory()}, []);
 
   return (
     <main className="container">
-      <header><h1>Welcome to the Metamask ATM!</h1></header>
+      <header><h1 style={{color: "#00FFFF", fontFamily:"Poppins"}}>Welcome to the Metamaskcrafter's wallet!</h1></header>
       {initUser()}
       <style jsx>{`
         .container {
           text-align: center
         }
-        
       `}
       </style>
-    </main>
-  )
+    </main>
+  )
 }
