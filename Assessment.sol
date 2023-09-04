@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.9;
 
 //import "hardhat/console.sol";
 
 contract Assessment {
     address payable public owner;
     uint256 public balance;
-    // uint public b=5;
+
+    struct Transaction {
+        address sender;
+        uint amount;
+        uint256 timeStamp;
+    }
+
+    Transaction[] public eventHistory;
+
     event Deposit(uint256 amount);
     event Withdraw(uint256 amount);
-    
-
 
     constructor(uint initBalance) payable {
         owner = payable(msg.sender);
@@ -32,6 +38,8 @@ contract Assessment {
 
         // assert transaction completed successfully
         assert(balance == _previousBalance + _amount);
+
+        eventHistory.push(Transaction(msg.sender, _amount, block.timestamp));
 
         // emit the event
         emit Deposit(_amount);
@@ -55,29 +63,40 @@ contract Assessment {
 
         // assert the balance is correct
         assert(balance == (_previousBalance - _withdrawAmount));
+        eventHistory.push(Transaction(msg.sender, _withdrawAmount, block.timestamp));
+
 
         // emit the event
         emit Withdraw(_withdrawAmount);
     }
 
-    function checkOwner()public pure returns(string memory){
-        string memory UID="21BCS11262";
-        return UID;
+    function getOwner() public pure returns(string memory){
+        string memory ownerName = "Jaya Singh";
+        return ownerName;
+    }
+
+
+    function getOwnerAddress() public view returns(address) {
+        return owner;
+    }
+
+    function getEventHistoryLength() public view returns (uint256) {
+        return eventHistory.length;
+    }
+
+    
+    function getTransaction(uint256 index) public view returns (address, uint256, uint256) {
+        require(index < eventHistory.length, "Index is Invalid");
+
+        Transaction memory transaction = eventHistory[index];
+        return (transaction.sender, transaction.amount, transaction.timeStamp);
     }
     
-    function division(uint a, uint b) public pure returns(uint){
-        return a/b;
-        
-        // emit Division((a/b));
+    function getAllTransactions() public view returns (Transaction[] memory) {
+        return eventHistory;
     }
 
-    function substraction(uint a, uint b) public pure returns(uint){
-        require(a>=b,"value of a must me greater than b");
-        return a-b;
-    }
+   
 
-    function modulo(uint a, uint b) public pure returns(uint){
-        return a%b;
-    }
-    
 }
+
